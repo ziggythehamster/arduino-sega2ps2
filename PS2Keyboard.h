@@ -2,8 +2,9 @@
 #define PS2Keyboard_h
 
 #include <Arduino.h>
+#include <FidPS2Keyboard.h>
+#include <FidPS2Host.h>
 #include "Sega2PS2.h"
-#include "PS2Emu.h"
 
 // PS/2 device commands
 const byte PS2_CMD_ACK               = 0xFA;
@@ -32,8 +33,6 @@ const byte PS2_HOSTCMD_SET_SCANCODES       = 0xF0;
 class PS2Keyboard {
   public:
     PS2Keyboard(int clk, int data);
-    bool isCommunicationInhibited();
-    bool isHostWaiting();
     void processHostCommand();
     void sendKey(button btn, bool keyUp);
     void setup();
@@ -42,10 +41,10 @@ class PS2Keyboard {
     int _clkPin;
     int _dataPin;
     bool _enabled;
-    PS2Emu _ps2dev;
     void ack();
     void debugKey(button btn, bool keyUp);
     void processHostCommand(byte command);
+    void reset();
 };
 
 #endif

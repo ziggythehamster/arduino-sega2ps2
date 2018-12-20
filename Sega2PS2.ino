@@ -28,6 +28,9 @@
 // green  = pin 8
 // orange = pin 9
 
+// I didn't want to put the controller or the PS/2 lines on the ICSP pins,
+// and the PS/2 lines need to be 2 or 3 for IRQ purposes, so most of these
+// are attached to the analog pins.
 #define SC_PIN1 4
 #define SC_PIN2 A1
 #define SC_PIN3 A3
@@ -37,7 +40,7 @@
 #define SC_PIN9 A5
 
 // specify pins for the PS/2 connection
-// using A0 and A1 to avoid the ICSP pins 10 and 11
+// clock should be on pin 2 or 3 for best results because the PS/2 library uses an IRQ
 #define PS2_CLK_PIN 3
 #define PS2_DATA_PIN 2
 
@@ -58,18 +61,13 @@ void setup() {
 
 void loop() { 
   // put your main code here, to run repeatedly:
-  if (keyboard.isCommunicationInhibited()) {
-    digitalWrite(LED_BUILTIN, LOW);
-  } else {
-    digitalWrite(LED_BUILTIN, HIGH);
 
-    if (keyboard.isHostWaiting()) {
-      keyboard.processHostCommand();
-    } else {
-      currentState = controller.getState();
-      sendStates();
-    }
-  }
+  // process an incoming host command
+  keyboard.processHostCommand();
+
+  // send controller state changes
+  currentState = controller.getState();
+  sendStates();
 }
 
 void sendStates() {
