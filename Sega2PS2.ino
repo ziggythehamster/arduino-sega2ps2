@@ -31,7 +31,7 @@
 // I didn't want to put the controller or the PS/2 lines on the ICSP pins,
 // and the PS/2 lines need to be 2 or 3 for IRQ purposes, so most of these
 // are attached to the analog pins.
-#define SC_PIN1 4
+#define SC_PIN1 7
 #define SC_PIN2 A1
 #define SC_PIN3 A3
 #define SC_PIN4 A4
@@ -41,12 +41,17 @@
 
 // specify pins for the PS/2 connection
 // clock should be on pin 2 or 3 for best results because the PS/2 library uses an IRQ
-#define PS2_CLK_PIN 3
-#define PS2_DATA_PIN 2
+// also, these are configurable, but if you use different pins, you'll have to comment out all of the defines in
+// FidPS2Host.cpp.
+#define PS2_CLK_PIN 2
+#define PS2_DATA_PIN 4
 
 // initialize controller and keyboard
 SegaController controller(SC_PIN7, SC_PIN1, SC_PIN2, SC_PIN3, SC_PIN4, SC_PIN6, SC_PIN9);
 PS2Keyboard keyboard(PS2_CLK_PIN, PS2_DATA_PIN);
+
+// Serial port incoming command
+String serialCommand = "";
 
 // Controller states
 word currentState = 0;
@@ -56,14 +61,44 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
   keyboard.setup();
 }
 
 void loop() { 
   // put your main code here, to run repeatedly:
+  char rxByte = 0;
+  byte parsedCommandByte = 0;
+  unsigned long parsedCommand = 0;
 
   // process an incoming host command
   keyboard.processHostCommand();
+
+  // Handle incoming data from the serial console
+  if (Serial.available() > 0) {
+    rxByte = Serial.read();
+
+    if (rxByte != '\n' && rxByte != ' ') {
+      serialCommand += rxByte;
+    }
+
+    if (serialCommand.length() == 2) {
+      parsedCommand = strtoul(serialCommand.c_str(), 0, 16);
+
+      // prevent an overflow since strtoul wants an unsigned long
+      if (parsedCommand <= 255 && parsedCommand >= 0) {
+        parsedCommandByte = byte(parsedCommand);
+
+        Serial.print("Sending command: ");
+        Serial.println(parsedCommandByte, HEX);
+
+        keyboard.sendCommand(parsedCommandByte);
+      }
+
+      // consume the serial command
+      serialCommand = "";
+    }
+  }
 
   // send controller state changes
   currentState = controller.getState();
