@@ -5,7 +5,7 @@ PS2Keyboard::PS2Keyboard(int clk, int data) : _clkPin(clk), _dataPin(data), _ena
 
 // acknowledges the host command
 void PS2Keyboard::ack() {
-  fid_ps2h_write(PS2_CMD_ACK);
+  sendCommand(PS2_CMD_ACK);
 }
 
 // logs that a button on the controller was pressed
@@ -57,12 +57,12 @@ void PS2Keyboard::processHostCommand(byte command) {
     case PS2_HOSTCMD_DEVICE_ID: // get device ID
       Serial.println("PS2_HOSTCMD_DEVICE_ID");
       ack();
-      fid_ps2h_write(0xAB);
-      fid_ps2h_write(0x83);
+      sendCommand(0xAB);
+      sendCommand(0x83);
       break;
     case PS2_HOSTCMD_ECHO: // echo
       Serial.println("PS2_HOSTCMD_ECHO");
-      fid_ps2h_write(PS2_CMD_ECHO);
+      sendCommand(PS2_CMD_ECHO);
       break;
 
     case PS2_HOSTCMD_RESET: // reset
@@ -71,6 +71,39 @@ void PS2Keyboard::processHostCommand(byte command) {
 
       // reset
       reset();
+      break;
+
+    case PS2_HOSTCMD_SET_LEDS: // set/reset LEDs
+      Serial.print("PS2_HOSTCMD_SET_LEDS");
+      ack();
+
+      delay(20); // otherwise there might not be a value in the buffer
+      fid_ps2h_read(&response);
+      ack();
+      
+      Serial.print(" - host wants LEDs: ");
+      Serial.println(response, HEX);
+
+      if (response == 0x00) {
+        // no LEDs on
+        digitalWrite(LED_BUILTIN, LOW);
+      } else {
+        // some LEDs on
+        digitalWrite(LED_BUILTIN, HIGH);
+      }
+
+      response = 0x00;
+      break;
+
+    case PS2_HOSTCMD_SET_SCANCODES: // set scan code set
+      Serial.print("PS2_HOSTCMD_SET_SCANCODES");
+      ack();
+
+      delay(20); // otherwise there might not be a value in the buffer
+      fid_ps2h_read(&response);
+      ack();
+      Serial.print(" - host wants set ");
+      Serial.println(response, HEX);
       break;
 
     // these are commands which we pretend to handle that don't have a second value
@@ -84,8 +117,6 @@ void PS2Keyboard::processHostCommand(byte command) {
       break;
 
     // these are commands which we pretend to handle that require us to grab a second value
-    case PS2_HOSTCMD_SET_LEDS: // set/reset LEDs
-    case PS2_HOSTCMD_SET_SCANCODES: // set scan code set
     case PS2_HOSTCMD_SET_RATE: // set typing rate
       ack();
       fid_ps2h_read(&response); // we don't do anything with this
@@ -99,37 +130,44 @@ void PS2Keyboard::processHostCommand(byte command) {
   }
 }
 
+// sends a PS/2 command byte
+void PS2Keyboard::sendCommand(byte command) {
+  fid_ps2h_write(command);
+}
+
 // take the passed button and send the PS2 command associated
 void PS2Keyboard::sendKey(button btn, bool keyUp) {
   debugKey(btn, keyUp);
 
   if (_enabled) { 
     if (btn.isExtendedKey) {
-      fid_ps2h_write(PS2_CMD_EXTENDED);
+      sendCommand(PS2_CMD_EXTENDED);
     }
   
     if (keyUp) {
-      fid_ps2h_write(PS2_CMD_BREAK);
+      sendCommand(PS2_CMD_BREAK);
     }
   
-    fid_ps2h_write(btn.ps2ScanCode);
+    sendCommand(btn.ps2ScanCode);
   }
 }
 
 // call this in your main sketch setup routine
 void PS2Keyboard::setup() {
-  fid_ps2h_init(_dataPin, _clkPin);
   reset();
 }
 
 // pretends to perform a Basic Assurance Test (BAT)
 void PS2Keyboard::reset() {
-  // keyboard is initially enabled on boot
+  // keyboard is initially enabled on boot/reset
   _enabled = true;
+  digitalWrite(LED_BUILTIN, LOW);
+
+  fid_ps2h_init(_dataPin, _clkPin); // reinit on every reset to clear buffers
 
   delay(1000);
 
   Serial.println("Telling host BAT OK");
-  fid_ps2h_write(PS2_CMD_BAT_OK);
+  sendCommand(PS2_CMD_BAT_OK);
   Serial.println("BAT OK done.");
 }

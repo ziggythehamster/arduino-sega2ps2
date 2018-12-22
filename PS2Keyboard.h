@@ -34,6 +34,7 @@ class PS2Keyboard {
   public:
     PS2Keyboard(int clk, int data);
     void processHostCommand();
+    void sendCommand(byte command);
     void sendKey(button btn, bool keyUp);
     void setup();
 
