@@ -9,8 +9,12 @@ void PS2Keyboard::ack() {
 }
 
 // logs that a button on the controller was pressed
-void PS2Keyboard::debugKey(button btn, bool keyUp) {
+void PS2Keyboard::debugKey(button btn, bool keyUp, bool useSpecial) {
   Serial.print(btn.mnemonic);
+
+  if (useSpecial) {
+    Serial.print(" SPECIAL");
+  }
 
   if (keyUp) {
     Serial.print(" break");
@@ -136,8 +140,13 @@ void PS2Keyboard::sendCommand(byte command) {
 }
 
 // take the passed button and send the PS2 command associated
-void PS2Keyboard::sendKey(button btn, bool keyUp) {
-  debugKey(btn, keyUp);
+void PS2Keyboard::sendKey(button btn, bool keyUp, bool useSpecial) {
+  // Don't do anything if the key doesn't have a special function assigned
+  if (useSpecial && btn.ps2SpecialScanCode == 0x00) {
+    return;
+  }
+  
+  debugKey(btn, keyUp, useSpecial);
 
   if (_enabled) { 
     if (btn.isExtendedKey) {
@@ -147,8 +156,12 @@ void PS2Keyboard::sendKey(button btn, bool keyUp) {
     if (keyUp) {
       sendCommand(PS2_CMD_BREAK);
     }
-  
-    sendCommand(btn.ps2ScanCode);
+
+    if (useSpecial) {
+      sendCommand(btn.ps2SpecialScanCode);
+    } else {
+      sendCommand(btn.ps2ScanCode);
+    }
   }
 }
 

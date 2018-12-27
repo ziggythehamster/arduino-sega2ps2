@@ -35,7 +35,7 @@ class PS2Keyboard {
     PS2Keyboard(int clk, int data);
     void processHostCommand();
     void sendCommand(byte command);
-    void sendKey(button btn, bool keyUp);
+    void sendKey(button btn, bool keyUp, bool useSpecial);
     void setup();
 
   private:
@@ -43,7 +43,7 @@ class PS2Keyboard {
     int _dataPin;
     bool _enabled;
     void ack();
-    void debugKey(button btn, bool keyUp);
+    void debugKey(button btn, bool keyUp, bool useSpecial);
     void processHostCommand(byte command);
     void reset();
 };
