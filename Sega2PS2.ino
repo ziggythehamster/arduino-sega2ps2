@@ -57,6 +57,10 @@ String serialCommand = "";
 word currentState = 0;
 word lastState = 0;
 
+// Special button functions
+bool isHoldingSpecialButton = false;
+bool didPressButtonWhileHoldingSpecial = false;
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
@@ -106,17 +110,51 @@ void loop() {
 }
 
 void sendStates() {
+  button syntheticButton;
+
   for (byte i = 0; i < BUTTONS; i++) {
     word last = (lastState & buttonsAvailable[i].button);
     word current = (currentState & buttonsAvailable[i].button);
 
     if (last != current) {
       if (current) {
-        // make
-        keyboard.sendKey(buttonsAvailable[i], false);
+        // check for special button being held down
+        if (buttonsAvailable[i].ps2ScanCode == 0xFF) {
+          isHoldingSpecialButton = true;
+          didPressButtonWhileHoldingSpecial = false; 
+        } else {
+          // make
+          if (isHoldingSpecialButton) {
+            didPressButtonWhileHoldingSpecial = true;
+
+            keyboard.sendKey(buttonsAvailable[i], false, true);
+          } else {
+            keyboard.sendKey(buttonsAvailable[i], false, false);
+          }
+        }
       } else {
-        // break
-        keyboard.sendKey(buttonsAvailable[i], true);
+        // check for special button being held down
+        if (buttonsAvailable[i].ps2ScanCode == 0xFF) {
+          // if you didn't press any other buttons while holding down the special key, make and break the special key
+          if (!didPressButtonWhileHoldingSpecial) {
+            // send make
+            keyboard.sendKey(buttonsAvailable[i], false, true);
+            
+            // send break
+            keyboard.sendKey(buttonsAvailable[i], true, true);
+          }
+
+          // reset state
+          isHoldingSpecialButton = false;
+          didPressButtonWhileHoldingSpecial = false;
+        } else {
+          // break
+          if (isHoldingSpecialButton) {
+            keyboard.sendKey(buttonsAvailable[i], true, true);
+          } else {
+            keyboard.sendKey(buttonsAvailable[i], true, false);
+          }
+        }
       }
     }
   }
