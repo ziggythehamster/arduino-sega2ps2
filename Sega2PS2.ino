@@ -17,7 +17,7 @@
 // Connect pin 5 to +5V and pin 8 to GND
 // Connect the remaining pins to digital I/O pins (see below)
 
-// my color scheme:
+// my ribbon cable colors:
 // black  = pin 1
 // gray   = pin 2
 // blue   = pin 3
